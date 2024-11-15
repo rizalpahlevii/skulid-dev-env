@@ -1,0 +1,79 @@
+name: skulid
+services:
+  api:
+    container_name: api
+    labels:
+      - dev.orbstack.domains=api.skulid.local
+    build:
+      context: .
+      dockerfile: docker/config/php/Dockerfile81
+    working_dir: /var/www/api
+    volumes:
+      - ./api:/var/www/api
+      - ./api/docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - skulid
+  dashboard:
+    container_name: dashboard
+    labels:
+      - dev.orbstack.domains=dashboard.skulid.local
+    build:
+      context: .
+      dockerfile: dashboard/DockerfileDevelopment
+      args:
+        - uid=1000
+        - user=rizal
+    working_dir: /var/www/dashboard
+    volumes:
+      - ./dashboard:/var/www/dashboard
+      - ./dashboard/node_modules:/var/www/dashboard/node_modules
+    networks:
+      - skulid
+  mysql:
+    container_name: mysql
+    image: arm64v8/mysql:8.0.36
+    environment:
+      MYSQL_ROOT_PASSWORD: skulid
+      MYSQL_DATABASE: skulid
+      MYSQL_USER: skulid
+      MYSQL_PASSWORD: skulid
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./docker/config/mysql/my.cnf:/etc/mysql/my.cnf
+      - ./docker/data/mysql:/var/lib/mysql
+      - ./docker/entrypoint/mysql:/docker-entrypoint-initdb.d
+    networks:
+      - skulid
+  redis:
+    container_name: redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - skulid
+  nginx:
+    container_name: nginx
+    labels:
+      - dev.orbstack.domains=skulid.local
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./docker/config/nginx/index.html:/usr/share/nginx/html/index.html
+      - ./api:/var/www/api
+      - ./dashboard:/var/www/dashboard
+      - ./docker/config/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+    networks:
+      - skulid
+networks:
+  skulid:
+    driver: bridge
+
+volumes:
+  mysql:
+  redis:
+  mailhog:
